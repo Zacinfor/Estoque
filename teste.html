@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Estoque</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: hsl(249, 30%, 62%);
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding: 10px 0;
+            text-align: center;
+        }
+        .form-container {
+            background: #fff;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .form-container h2 {
+            margin-top: 0;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .form-group textarea {
+            resize: vertical;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .form-group button {
+            padding: 10px 15px;
+            background: #333;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .form-group button:hover {
+            background: #555;
+        }
+        .form-group .radio-group {
+            display: flex;
+            gap: 10px;
+        }
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            margin: 0;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .radio-group input[type="radio"] {
+            display: none;
+        }
+        .radio-group input[type="radio"]:checked + span {
+            font-weight: bold;
+        }
+        .radio-group input[type="radio"][value="Ouro"]:checked + span::before {
+            background-color: #f5c518; /* Cor dourada */
+        }
+        .radio-group input[type="radio"][value="Prata"]:checked + span::before {
+            background-color: #c0c0c0; /* Cor prata */
+        }
+        .radio-group span::before {
+            content: '';
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: #ddd;
+            margin-right: 8px;
+            transition: background-color 0.3s;
+        }
+        .radio-group label:hover {
+            background-color: #eee;
+        }
+        .item-list {
+            margin-top: 20px;
+        }
+        .item-list table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .item-list th, .item-list td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .item-list th {
+            background: #333;
+            color: #fff;
+        }
+        .item-list td.description {
+            word-break: break-word; /* Quebra de palavra */
+            white-space: pre-wrap; /* Mantém quebras de linha */
+        }
+        .action-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .remove-btn {
+            background: #e74c3c;
+            color: #fff;
+        }
+        .remove-btn:hover {
+            background: #c0392b;
+        }
+        .edit-btn {
+            background: #3498db;
+            color: #fff;
+            margin-right: 5px;
+        }
+        .edit-btn:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Gerenciamento de Estoque</h1>
+    </header>
+    <div class="container">
+        <div class="form-container">
+            <h2 id="formTitle">Adicionar Item</h2>
+            <div class="form-group">
+                <label for="itemName">Nome do Item:</label>
+                <input type="text" id="itemName">
+            </div>
+            <div class="form-group">
+                <label for="itemDescription">Descrição:</label>
+                <textarea id="itemDescription" rows="4" maxlength="800"></textarea>
+                <small>Limite de 800 caracteres.</small>
+            </div>
+            <div class="form-group">
+                <label>Categoria:</label>
+                <div class="radio-group">
+                    <label>
+                        <input type="radio" name="itemCategory" value="Ouro" checked>
+                        <span>Ouro</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="itemCategory" value="Prata">
+                        <span>Prata</span>
+                    </label>
+                </div>
+            </div>
+            <div class="form-group">
+                <button id="actionButton" onclick="addItem()">Adicionar</button>
+            </div>
+        </div>
+
+        <div class="item-list">
+            <h2>Lista de Itens</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome do Item</th>
+                        <th>Descrição</th>
+                        <th>Categoria</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="itemTableBody">
+                    <!-- Itens serão adicionados aqui -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', loadItems);
+
+        let editIndex = -1;
+
+        function addItem() {
+            const name = document.getElementById('itemName').value;
+            const description = document.getElementById('itemDescription').value;
+            const category = document.querySelector('input[name="itemCategory"]:checked').value;
+
+            if (!name || !description) {
+                alert('Por favor, preencha todos os campos.');
+                return;
+            }
+
+            const items = JSON.parse(localStorage.getItem('items')) || [];
+            
+            if (editIndex > -1) {
+                items[editIndex] = { name, description, category };
+                editIndex = -1;
+                document.getElementById('formTitle').textContent = 'Adicionar Item';
+                document.getElementById('actionButton').textContent = 'Adicionar';
+            } else {
+                items.push({ name, description, category });
+            }
+
+            localStorage.setItem('items', JSON.stringify(items));
+
+            document.getElementById('itemName').value = '';
+            document.getElementById('itemDescription').value = '';
+
+            loadItems();
+        }
+
+        function loadItems() {
+            const items = JSON.parse(localStorage.getItem('items')) || [];
+            const itemTableBody = document.getElementById('itemTableBody');
+            itemTableBody.innerHTML = '';
+
+            items.forEach((item, index) => {
+                const row = document.createElement('tr');
+
+                row.innerHTML = `
+                    <td>${item.name}</td>
+                    <td class="description">${item.description}</td>
+                    <td>${item.category}</td>
+                    <td>
+                        <button class="action-btn edit-btn" onclick="editItem(${index})">Editar</button>
+                        <button class="action-btn remove-btn" onclick="removeItem(${index})">Remover</button>
+                    </td>
+                `;
+                
+                itemTableBody.appendChild(row);
+            });
+        }
+
+        function removeItem(index) {
+            const items = JSON.parse(localStorage.getItem('items')) || [];
+            items.splice(index, 1);
+            localStorage.setItem('items', JSON.stringify(items));
+
+            loadItems();
+        }
+
+        function editItem(index) {
+            const items = JSON.parse(localStorage.getItem('items')) || [];
+            const item = items[index];
+
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('itemDescription').value = item.description;
+            document.querySelector(`input[name="itemCategory"][value="${item.category}"]`).checked = true;
+
+            document.getElementById('formTitle').textContent = 'Editar Item';
+            document.getElementById('actionButton').textContent = 'Salvar';
+            
+            editIndex = index;
+        }
+    </script>
+</body>
+</html>
